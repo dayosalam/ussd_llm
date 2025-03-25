@@ -7,6 +7,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 import requests
+from llm import stream_graph_updates
 
 app = Flask(__name__)
 
@@ -65,12 +66,12 @@ def ussd_callback():
     phone_number = request.values.get("phoneNumber")
     text = request.values.get("text", "").strip()
 
-    rag_chain = query_llm()
+    rag_chain = stream_graph_updates()
 
     if not text:
         response = "CON Welcome to AI Chatbot.\nEnter your query:"
     else:
-        llm_response = rag_chain.invoke({"question": text})
+        llm_response = rag_chain(user_input = text)
         response = f"END {llm_response[:160]}"  # USSD messages are limited to ~160 characters
 
     return response
