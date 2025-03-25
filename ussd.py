@@ -66,12 +66,12 @@ def ussd_callback():
     phone_number = request.values.get("phoneNumber")
     text = request.values.get("text", "").strip()
 
-    rag_chain = stream_graph_updates()
+    
 
     if not text:
         response = "CON Welcome to AI Chatbot.\nEnter your query:"
     else:
-        llm_response = rag_chain(user_input = text)
+        llm_response = stream_graph_updates(user_input = text)
         response = f"END {llm_response[:160]}"  # USSD messages are limited to ~160 characters
 
     return response
