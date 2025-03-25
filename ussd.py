@@ -96,23 +96,20 @@ def ussd_callback():
     text = request.values.get("text", "").strip()
 
     
-    while True:
-        if not text:
-            response = "CON Welcome to AI Chatbot.\nEnter your query:"
-        else:
-            try:
-                user_input = input("User: ")
-                if user_input.lower() in ["quit", "exit", "q"]:
-                    print("Goodbye!")
-                    break
+    if not text:
+        response = "CON Welcome to AI Chatbot.\nEnter your query:"
+    else:
+        try:
+            user_input = input("User: ")
+            if user_input.lower() in ["quit", "exit", "q"]:
+                print("Goodbye!")
 
-                response = stream_graph_updates(user_input)
-            except:
-                # Fallback if input() is not available
-                user_input = "What do you know about LangGraph?"
-                print("User: " + user_input)
-                response = stream_graph_updates(user_input)
-                break
+            response = stream_graph_updates(user_input)
+        except:
+            # Fallback if input() is not available
+            user_input = "What do you know about LangGraph?"
+            print("User: " + user_input)
+            response = stream_graph_updates(user_input)
   
     return response
 
