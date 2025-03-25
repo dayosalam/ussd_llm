@@ -1,79 +1,83 @@
-from flask import Flask, request
+#%%
+import getpass 
+import os 
+
+# def _set_env(var: str):
+#     if not os.environ.get(var):
+#         os.environ[var] = getpass.getpass(f"{var}: ")
+
+
+# _set_env("GROQ_API_KEY")
+
+
+#%%
+from typing import Annotated
+
+from typing_extensions import TypedDict
+
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+
+
+
+class State(TypedDict):
+    # Messages have the type "list". The `add_messages` function
+    # in the annotation defines how this state key should be updated
+    # (in this case, it appends messages to the list, rather than overwriting them)
+    messages: Annotated[list, add_messages]
+
+
+graph_builder = StateGraph(State)
+#%%
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
-from langchain.memory import ConversationBufferMemory
-from langchain_core.prompts import MessagesPlaceholder
-from langchain_core.output_parsers import StrOutputParser
-import requests
-
-app = Flask(__name__)
-
-response = ""
-
-
-
-# Replace with your OpenAI or local LLM API key
 
 GROQ_API_KEY = "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"
 # Initialize LLM
-llm_groq = ChatGroq(temperature=0, model="llama-3.1-8b-instant", groq_api_key=GROQ_API_KEY)
+llm = ChatGroq(temperature=0, model="llama-3.1-8b-instant", groq_api_key=GROQ_API_KEY)
 
-def query_llm():
-    """Builds the LangChain pipeline."""
-    template = """Based on the context below, write a simple response that would answer the user's question. 
-    Use the following pieces of retrieved-context to answer the question. 
-    If you don't know the answer, say that you don't know.
-    Use three sentences maximum and keep the answer concise.
-    In your response, go straight to answering.
+def chatbot(state: State):
+    return {"messages": [llm.invoke(state["messages"])]}
 
-    Question: {question}
-    """
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", """
-                You are a Super Intelligent chatbot with Advanced Capabilities. 
-                You are a chatbot that can answer any question with a superhero joke.
-                You are limited to 150 characters of response.
-            """),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", template),
-        ]
-    )
+# The first argument is the unique node name
+# The second argument is the function or object that will be called whenever
+# the node is used.
+graph_builder.add_node("chatbot", chatbot)
+#%%
+graph_builder.add_edge(START, "chatbot")
 
-    memory = ConversationBufferMemory(return_messages=True)
+graph_builder.add_edge("chatbot", END)
 
-    # LangChain pipeline
-    rag_chain = (
-        RunnablePassthrough.assign(
-            history=RunnableLambda(lambda x: memory.load_memory_variables(x)["history"])
-        )
-        | prompt
-        | llm_groq
-        | StrOutputParser()
-    )
+graph = graph_builder.compile()
 
-    return rag_chain
+# from IPython.display import Image, display
 
-@app.route('/', methods=['POST', 'GET'])
-def ussd_callback():
-    """Handles USSD interactions."""
-    session_id = request.values.get("sessionId")
-    service_code = request.values.get("serviceCode")
-    phone_number = request.values.get("phoneNumber")
-    text = request.values.get("text", "").strip()
+# try:
+#     display(Image(graph.get_graph().draw_mermaid_png()))
+# except Exception:
+#     # This requires some extra dependencies and is optional
+#     pass
+#%%
+def stream_graph_updates(user_input: str):
+    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
+        for value in event.values():
+            print("Assistant:", value["messages"][-1].content)
 
-    rag_chain = query_llm()
+# Ensure the script only runs when executed directly, not when imported
+if __name__ == "__main__":
+    while True:
+        try:
+            user_input = input("User: ")
+            if user_input.lower() in ["quit", "exit", "q"]:
+                print("Goodbye!")
+                break
 
-    if not text:
-        response = "CON Welcome to AI Chatbot.\nEnter your query:"
-    else:
-        llm_response = rag_chain.invoke({"question": text})
-        response = f"END {llm_response[:160]}"  # USSD messages are limited to ~160 characters
+            stream_graph_updates(user_input)
+        except:
+            # Fallback if input() is not available
+            user_input = "What do you know about LangGraph?"
+            print("User: " + user_input)
+            stream_graph_updates(user_input)
+            break
 
-    return response
-
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)  # `host="0.0.0.0"` allows external access
+#%%
