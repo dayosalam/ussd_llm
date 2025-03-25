@@ -31,7 +31,9 @@ graph_builder = StateGraph(State)
 #%%
 from langchain_groq import ChatGroq
 
-llm = ChatGroq(temperature=0, model="llama-3.1-8b-instant")
+GROQ_API_KEY = "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"
+# Initialize LLM
+llm = ChatGroq(temperature=0, model="llama-3.1-8b-instant", groq_api_key=GROQ_API_KEY)
 
 def chatbot(state: State):
     return {"messages": [llm.invoke(state["messages"])]}
