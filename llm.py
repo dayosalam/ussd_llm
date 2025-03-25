@@ -50,32 +50,34 @@ graph_builder.add_edge("chatbot", END)
 
 graph = graph_builder.compile()
 
-from IPython.display import Image, display
+# from IPython.display import Image, display
 
-try:
-    display(Image(graph.get_graph().draw_mermaid_png()))
-except Exception:
-    # This requires some extra dependencies and is optional
-    pass
+# try:
+#     display(Image(graph.get_graph().draw_mermaid_png()))
+# except Exception:
+#     # This requires some extra dependencies and is optional
+#     pass
 #%%
 def stream_graph_updates(user_input: str):
     for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
         for value in event.values():
             print("Assistant:", value["messages"][-1].content)
 
+# Ensure the script only runs when executed directly, not when imported
+if __name__ == "__main__":
+    while True:
+        try:
+            user_input = input("User: ")
+            if user_input.lower() in ["quit", "exit", "q"]:
+                print("Goodbye!")
+                break
 
-while True:
-    try:
-        user_input = input("User: ")
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("Goodbye!")
+            stream_graph_updates(user_input)
+        except:
+            # Fallback if input() is not available
+            user_input = "What do you know about LangGraph?"
+            print("User: " + user_input)
+            stream_graph_updates(user_input)
             break
 
-        stream_graph_updates(user_input)
-    except:
-        # fallback if input() is not available
-        user_input = "What do you know about LangGraph?"
-        print("User: " + user_input)
-        stream_graph_updates(user_input)
-        break
 #%%
