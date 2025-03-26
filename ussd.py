@@ -100,16 +100,16 @@ def ussd_callback():
         response = "CON Welcome to AI Chatbot.\nEnter your query:"
     else:
         try:
-            user_input = input("User: ")
-            if user_input.lower() in ["quit", "exit", "q"]:
+            text = input("User: ")
+            if text.lower() in ["quit", "exit", "q"]:
                 print("Goodbye!")
 
-            response = stream_graph_updates(user_input)
+            response = stream_graph_updates(text)
         except:
             # Fallback if input() is not available
-            user_input = "What do you know about LangGraph?"
-            print("User: " + user_input)
-            response = stream_graph_updates(user_input)
+            text = "What do you know about LangGraph?"
+            print("User: " + text)
+            response = stream_graph_updates(text)
   
     return response
 
