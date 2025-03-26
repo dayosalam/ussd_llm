@@ -95,21 +95,17 @@ def ussd_callback():
     phone_number = request.values.get("phoneNumber")
     text = request.values.get("text", "").strip()
 
-    
     if not text:
         response = "CON Welcome to AI Chatbot.\nEnter your query:"
     else:
-        try:
-            if text.lower() in ["quit", "exit", "q"]:
-                print("Goodbye!")
+        if text.lower() in ["quit", "exit", "q"]:
+            response = "END Goodbye! Thanks for using AI Chatbot."
+        else:
+            try:
+                response = f"CON {stream_graph_updates(text)}"
+            except Exception as e:
+                response = "END Sorry, something went wrong."
 
-            response = stream_graph_updates(text)
-        except:
-            # Fallback if input() is not available
-            text = "What do you know about LangGraph?"
-            print("User: " + text)
-            response = stream_graph_updates(text)
-  
     return response
 
 if __name__ == '__main__':
