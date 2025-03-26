@@ -100,7 +100,6 @@ def ussd_callback():
         response = "CON Welcome to AI Chatbot.\nEnter your query:"
     else:
         try:
-            text = input("User: ")
             if text.lower() in ["quit", "exit", "q"]:
                 print("Goodbye!")
 
