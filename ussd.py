@@ -102,7 +102,7 @@ def ussd_callback():
             response = "END Goodbye! Thanks for using AI Chatbot."
         else:
             try:
-                response = f"CON {stream_graph_updates(text)}"
+                response = f"END {stream_graph_updates(text)}"
             except Exception as e:
                 response = "END Sorry, something went wrong."
 
