@@ -102,11 +102,14 @@ def ussd_callback():
             response = "END Goodbye! Thanks for using AI Chatbot."
         else:
             try:
-                response = f"END {stream_graph_updates(text)}"
+                ai_response = stream_graph_updates(text)
+                response = f"CON {ai_response}" if ai_response else "END Sorry, no response available."
             except Exception as e:
+                print(f"Error: {e}")  # Debugging
                 response = "END Sorry, something went wrong."
 
-    return response
+    print(f"Sending Response: {response}")  # Debugging
+    return response  # Ensure a valid response is always returned
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)  # `host="0.0.0.0"` allows external access

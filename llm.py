@@ -61,7 +61,10 @@ graph = graph_builder.compile()
 def stream_graph_updates(user_input: str):
     for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
         for value in event.values():
-            print(value["messages"][-1].content)
+            response_text += value["messages"][-1].content + "\n"  # Append messages
+
+            
+    return response_text.strip() if response_text else "END Sorry, no response available."
 
 # Ensure the script only runs when executed directly, not when imported
 # if __name__ == "__main__":
