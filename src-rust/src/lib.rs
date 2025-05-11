@@ -13,7 +13,7 @@ pub mod server;
 pub const ENV: LazyLock<()> = LazyLock::new(|| {
     let dir = env::current_dir().expect("Expected to find current working directory");
     let parent_dir = dir.parent().expect("Expected to find parent directory");
-    let env_path = parent_dir.join("../../.env.shared");
+    let env_path = parent_dir.join(".env.shared");
     dotenvy::from_path(env_path).expect("Environment variables did not load successfully");
 });
 pub fn get_env(key: &str) -> String {

@@ -26,7 +26,7 @@ pub fn get_parent_app() -> PathBuf {
 
 pub fn load_env() {
     let parent_app = get_parent_app();
-    let env_path = parent_app.join("../../../../.env.shared");
+    let env_path = parent_app.join(".env.shared");
     println!("env = {}", env_path.display());
     dotenvy::from_path(&env_path).expect("Failed to load .env.shared file")
 }
