@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run All" type="CompoundRunConfigurationType">
+    <toRun name="Run Rust" type="CargoCommandRunConfiguration" />
+    <toRun name="Run LLM" type="ShConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

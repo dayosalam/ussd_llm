@@ -171,20 +171,21 @@ def stream_graph_updates(user_input: str,  phone_number: str):
     return text
 
 #%%
-while True:
-    try:
-        user_input = input("User: ")
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("Goodbye!")
-            break
+if __name__ == "__main__":
+    while True:
+        try:
+            user_input = input("User: ")
+            if user_input.lower() in ["quit", "exit", "q"]:
+                print("Goodbye!")
+                break
 
-        print(stream_graph_updates(user_input, "+2347037378217"))
-    except:
-        # fallback if input() is not available
-        user_input = "What do you know about LangGraph?"
-        print("User: " + user_input)
-        stream_graph_updates(user_input, "+2347037378217")
-        break
+            print(stream_graph_updates(user_input, "+2347037378217"))
+        except:
+            # fallback if input() is not available
+            user_input = "What do you know about LangGraph?"
+            print("User: " + user_input)
+            stream_graph_updates(user_input, "+2347037378217")
+            break
 
 # %%
 

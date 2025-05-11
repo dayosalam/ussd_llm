@@ -24,20 +24,21 @@ def get_solana_list(thread_id):
         conn.close()
 
 # Example usage
-thread_id = input("Enter the thread ID: ")
-solana_list = get_solana_list(thread_id)
+if __name__ == "__main__":
+    thread_id = input("Enter the thread ID: ")
+    solana_list = get_solana_list(thread_id)
 
-if solana_list:
-    # Create a dictionary with thread_id and solana_list
-    output_data = {
-        "thread_id": thread_id,
-        "solana_list": solana_list
-    }
-    
-    # Write to JSON file
-    output_file = f"solana_data_{thread_id}.json"
-    with open(output_file, 'w') as f:
-        json.dump(output_data, f, indent=2)
-    
-    print(f"Data has been saved to {output_file}")
-    print(f"Solana list for thread ID {thread_id}: {json.dumps(solana_list, indent=2)}")
+    if solana_list:
+        # Create a dictionary with thread_id and solana_list
+        output_data = {
+            "thread_id": thread_id,
+            "solana_list": solana_list
+        }
+        
+        # Write to JSON file
+        output_file = f"solana_data_{thread_id}.json"
+        with open(output_file, 'w') as f:
+            json.dump(output_data, f, indent=2)
+        
+        print(f"Data has been saved to {output_file}")
+        print(f"Solana list for thread ID {thread_id}: {json.dumps(solana_list, indent=2)}")
