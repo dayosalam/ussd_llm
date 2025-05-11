@@ -2,6 +2,9 @@
 import getpass 
 import os 
 from typing import Annotated
+from pydantic import BaseModel
+from typing import List
+from langchain_core.messages import SystemMessage
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -13,6 +16,21 @@ from langchain_groq import ChatGroq
 from IPython.display import Image, display
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
+
+
+
+template = """You are a helpful AI assistant designed to guide users through transactions on the Solana blockchain.
+Your job is to interact conversationally with users, and collect the following essential details:
+
+Transaction Type: Ask the user whether they want to send, stake, swap, or receive SOL or tokens.
+
+Transaction Amount: Confirm the exact amount they want to transact.
+
+Recipient Wallet Address: If applicable (e.g. for sending or staking), collect the correct Solana wallet address where the transaction will be sent.
+
+Once all information is gathered, summarize the transaction details clearly and ask for user confirmation before proceeding.
+
+Be polite, concise, and ensure the wallet address is in valid Solana format (base58, typically 32–44 characters). Do not execute or simulate real transactions—only gather and summarize data.."""
 
 #%%
 sqlite_conn = sqlite3.connect("ussd.sqlite3", check_same_thread=False)
@@ -31,90 +49,103 @@ tool = TavilySearchResults(max_results=2, tavily_api_key= "tvly-lFHULYGAJ2EwuDdL
 tools = [tool]
 # tool.invoke("What's a 'node' in LangGraph?")
 #%%
-#ToolNode
-class BasicToolNode:
-    """A node that runs the tools requested in the last AIMessage."""
 
-    def __init__(self, tools: list) -> None:
-        self.tools_by_name = {tool.name: tool for tool in tools}
-
-    def __call__(self, inputs: dict):
-        if messages := inputs.get("messages", []):
-            message = messages[-1]
-        else:
-            raise ValueError("No message found in input")
-        outputs = []
-        for tool_call in message.tool_calls:
-            tool_result = self.tools_by_name[tool_call["name"]].invoke(
-                tool_call["args"]
-            )
-            outputs.append(
-                ToolMessage(
-                    content=json.dumps(tool_result),
-                    name=tool_call["name"],
-                    tool_call_id=tool_call["id"],
-                )
-            )
-        return {"messages": outputs}
-  
- 
-#tools_condition
-def route_tools(
-    state: State,
-):
-    """
-    Use in the conditional_edge to route to the ToolNode if the last message
-    has tool calls. Otherwise, route to the end.
-    """
-    if isinstance(state, list):
-        ai_message = state[-1]
-    elif messages := state.get("messages", []):
-        ai_message = messages[-1]
-    else:
-        raise ValueError(f"No messages found in input state to tool_edge: {state}")
-    if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
-        return "tools"
-    return END
+def get_messages_info(messages):
+    return [SystemMessage(content=template)] + messages
 
 
+class PromptInstructions(BaseModel):
+    """Instructions on how to prompt the LLM."""
 
+    objective: str
+    variables: List[str]
+    constraints: List[str]
+    requirements: List[str]
+    
 
-graph_builder = StateGraph(State)
-#%%
 
 
 GROQ_API_KEY = "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"
 # Initialize LLM
-llm = ChatGroq(temperature=0, model="llama-3.3-70b-specdec", groq_api_key=GROQ_API_KEY)
-llm_with_tools = llm.bind_tools(tools)
+llm = ChatGroq(temperature=0, model="meta-llama/llama-4-maverick-17b-128e-instruct", groq_api_key=GROQ_API_KEY)
+llm_with_tool = llm.bind_tools([PromptInstructions])
 
 
-tool_node = BasicToolNode(tools=[tool])
-graph_builder.add_node("tools", tool_node) 
+def info_chain(state):
+    messages = get_messages_info(state["messages"])
+    response = llm_with_tool.invoke(messages)
+    return {"messages": [response]}
 
-def chatbot(state: State):
-    return {"messages": [llm.invoke(state["messages"])]}
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+# New system prompt
+prompt_system = """Based on the following requirements, write the summary:
+
+{reqs}"""
 
 
-# The first argument is the unique node name
-# The second argument is the function or object that will be called whenever
-# the node is used.
-graph_builder.add_node("chatbot", chatbot)
+# Function to get the messages for the prompt
+# Will only get messages AFTER the tool call
+def get_prompt_messages(messages: list):
+    tool_call = None
+    other_msgs = []
+    for m in messages:
+        if isinstance(m, AIMessage) and m.tool_calls:
+            tool_call = m.tool_calls[0]["args"]
+        elif isinstance(m, ToolMessage):
+            continue
+        elif tool_call is not None:
+            other_msgs.append(m)
+    return [SystemMessage(content=prompt_system.format(reqs=tool_call))] + other_msgs
 
-graph_builder.add_conditional_edges(
-    "chatbot",
-    route_tools,
-    # The following dictionary lets you tell the graph to interpret the condition's outputs as a specific node
-    # It defaults to the identity function, but if you
-    # want to use a node named something else apart from "tools",
-    # You can update the value of the dictionary to something else
-    # e.g., "tools": "my_tools"
-    {"tools": "tools", END: END},
-)
-# Any time a tool is called, we return to the chatbot to decide the next step
-graph_builder.add_edge("tools", "chatbot")
-graph_builder.add_edge(START, "chatbot")
-graph = graph_builder.compile(checkpointer=memory)
+
+def prompt_gen_chain(state):
+    messages = get_prompt_messages(state["messages"])
+    response = llm.invoke(messages)
+    return {"messages": [response]}
+
+from typing import Literal
+
+from langgraph.graph import END
+
+
+def get_state(state):
+    messages = state["messages"]
+    if isinstance(messages[-1], AIMessage) and messages[-1].tool_calls:
+        return "add_tool_message"
+    elif not isinstance(messages[-1], HumanMessage):
+        return END
+    return "info"
+
+
+
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+
+
+workflow = StateGraph(State)
+workflow.add_node("info", info_chain)
+workflow.add_node("prompt", prompt_gen_chain)
+
+
+@workflow.add_node
+def add_tool_message(state: State):
+    return {
+        "messages": [
+            ToolMessage(
+                content="Prompt generated!",
+                tool_call_id=state["messages"][-1].tool_calls[0]["id"],
+            )
+        ]
+    }
+
+
+workflow.add_conditional_edges("info", get_state, ["add_tool_message", "info", END])
+workflow.add_edge("add_tool_message", "prompt")
+workflow.add_edge("prompt", END)
+workflow.add_edge(START, "info")
+graph = workflow.compile(checkpointer=memory)
 
 
 # try:
@@ -124,6 +155,14 @@ graph = graph_builder.compile(checkpointer=memory)
 #     pass
 #%%
 
+# def stream_graph_updates(user_input: str,  phone_number: str):
+#     config = {"configurable": {"thread_id": phone_number}}
+#     response = graph.invoke({"messages": [{"role": "user", "content": user_input}]},
+#                             config)
+#     text = response["messages"][-1].content
+#     return text
+
+
 def stream_graph_updates(user_input: str,  phone_number: str):
     config = {"configurable": {"thread_id": phone_number}}
     response = graph.invoke({"messages": [{"role": "user", "content": user_input}]},
@@ -131,22 +170,21 @@ def stream_graph_updates(user_input: str,  phone_number: str):
     text = response["messages"][-1].content
     return text
 
-
 #%%
-# while True:
-#     try:
-#         user_input = input("User: ")
-#         if user_input.lower() in ["quit", "exit", "q"]:
-#             print("Goodbye!")
-#             break
+while True:
+    try:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            print("Goodbye!")
+            break
 
-#         print(stream_graph_updates(user_input))
-#     except:
-#         # fallback if input() is not available
-#         user_input = "What do you know about LangGraph?"
-#         print("User: " + user_input)
-#         stream_graph_updates(user_input)
-#         break
+        print(stream_graph_updates(user_input, "+2347037378217"))
+    except:
+        # fallback if input() is not available
+        user_input = "What do you know about LangGraph?"
+        print("User: " + user_input)
+        stream_graph_updates(user_input, "+2347037378217")
+        break
 
 # %%
 
