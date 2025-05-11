@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run App",
+      "command": "npm run dev",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspace}/src-app"
+      },
+      "presentation": {
+        "group": "dev",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Run LLM",
+      "command": "uv run app.py",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}/src-llm"
+      },
+      "presentation": {
+        "group": "dev",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Run Rust",
+      "command": "cargo run",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}/src-rust"
+      },
+      "presentation": {
+        "group": "dev",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Start All Services",
+      "dependsOn": ["Run App", "Run LLM", "Run Rust"],
+      "group": {
+        "isDefault": true,
+        "kind": "build"
+      }
+    }
+  ]
+}

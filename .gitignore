@@ -1,0 +1,12 @@
+.anchor
+.DS_Store
+target
+assets
+**/*.rs.bk
+node_modules
+test-ledger
+.yarn
+src-llm/ussd_llm/.env
+src-llm/.venv
+.env.shared
+.prettierignore
