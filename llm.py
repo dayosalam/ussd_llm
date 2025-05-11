@@ -16,6 +16,7 @@ from langchain_groq import ChatGroq
 from IPython.display import Image, display
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
+import re
 
 
 
@@ -155,14 +156,6 @@ graph = workflow.compile(checkpointer=memory)
 #     pass
 #%%
 
-# def stream_graph_updates(user_input: str,  phone_number: str):
-#     config = {"configurable": {"thread_id": phone_number}}
-#     response = graph.invoke({"messages": [{"role": "user", "content": user_input}]},
-#                             config)
-#     text = response["messages"][-1].content
-#     return text
-
-
 def stream_graph_updates(user_input: str,  phone_number: str):
     config = {"configurable": {"thread_id": phone_number}}
     response = graph.invoke({"messages": [{"role": "user", "content": user_input}]},
@@ -177,14 +170,19 @@ while True:
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break
+            
+        text = stream_graph_updates(user_input, "+2347037378217")
 
-        print(stream_graph_updates(user_input, "+2347037378217"))
+        print(text)
     except:
         # fallback if input() is not available
         user_input = "What do you know about LangGraph?"
         print("User: " + user_input)
-        stream_graph_updates(user_input, "+2347037378217")
+        text = stream_graph_updates(user_input, "+2347037378217")
+        text
         break
+    
+
 
 # %%
 
